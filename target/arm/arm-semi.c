@@ -38,6 +38,8 @@
 #include "qemu/cutils.h"
 #endif
 
+#include "qemu-common.h"
+
 #define TARGET_SYS_OPEN        0x01
 #define TARGET_SYS_CLOSE       0x02
 #define TARGET_SYS_WRITEC      0x03
@@ -443,7 +445,13 @@ target_ulong do_arm_semihosting(CPUARMState *env)
             return ret;
         }
     case TARGET_SYS_CLOCK:
-        return clock() / (CLOCKS_PER_SEC / 100);
+        /* Number of centiseconds since execution started.  */
+        if (clock_ifetch) {
+            assert(count_ifetch);
+            return env_cpu(env)->ifetch_counter / (clock_ifetch / 100);
+        } else {
+            return clock() / (CLOCKS_PER_SEC / 100);
+        }
     case TARGET_SYS_TIME:
         return set_swi_errno(ts, time(NULL));
     case TARGET_SYS_SYSTEM:

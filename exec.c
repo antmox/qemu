@@ -868,7 +868,9 @@ void show_all_ifetch_counters(void)
 {
     CPUState *cpu;
 
-    if (!count_ifetch)
+    /* Print the result only if the -count-ifetch option was passed to
+     * the command-line.  */
+    if (!(count_ifetch & 0x1))
         return;
 
     CPU_FOREACH(cpu) {
@@ -876,6 +878,50 @@ void show_all_ifetch_counters(void)
                 "qemu: number of fetched instructions on CPU #%d = %" PRIu64 "\n",
                 cpu->cpu_index, cpu->ifetch_counter);
     }
+}
+
+/* Number of fetched instructions per second.  */
+uint64_t clock_ifetch = 0;
+
+uint64_t convert_string_to_frequency(const char *string)
+{
+    uint64_t factor;
+    char *not_a_number;
+    const char *cause;
+    unsigned long long int frequency;
+
+    frequency = strtoull(string, &not_a_number, 10);
+    if (!frequency) {
+        cause = "there's no digits in the initial part";
+        goto error;
+    }
+
+    if (not_a_number[0] == '\0' || !strcasecmp(not_a_number, "Hz")) {
+        factor = 1;
+    } else if (!strcasecmp(not_a_number, "KHz")) {
+        factor = 1000;
+    } else if (!strcasecmp(not_a_number, "MHz")) {
+        factor = 1000*1000;
+    } else if (!strcasecmp(not_a_number, "GHz")) {
+        factor = 1000*1000*1000;
+    } else {
+        cause = "the frequency unit is unknown";
+        goto error;
+    }
+
+    if (frequency >= UINT64_MAX / factor) {
+        fprintf(stderr, "qemu: frequency value \"%s\" overflows a "
+                "64-bit unsigned integer, limiting it to %" PRIu64 ".\n",
+                string, UINT64_MAX);
+        frequency = UINT64_MAX;
+        factor = 1;
+    }
+
+    return frequency * factor;
+
+error:
+    fprintf(stderr, "qemu: frequency value \"%s\" is invalid, %s.\n", string, cause);
+    exit(1);
 }
 
 CPUState *qemu_get_cpu(int index)

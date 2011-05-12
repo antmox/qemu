@@ -3686,7 +3686,11 @@ int main(int argc, char **argv, char **envp)
                 }
                 break;
             case QEMU_OPTION_count_ifetch:
-                count_ifetch = 1;
+                count_ifetch |= 0x1;
+                break;
+            case QEMU_OPTION_clock_ifetch:
+                count_ifetch |= 0x2;
+                clock_ifetch = convert_string_to_frequency(optarg);
                 break;
             case QEMU_OPTION_icount:
                 icount_opts = qemu_opts_parse_noisily(qemu_find_opts("icount"),
