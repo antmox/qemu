@@ -11157,6 +11157,22 @@ static abi_long do_syscall1(void *cpu_env, int num, abi_long arg1,
         struct timespec ts;
         ret = get_errno(clock_gettime(arg1, &ts));
         if (!is_error(ret)) {
+            if (clock_ifetch) {
+                assert(count_ifetch);
+                /* The following computation may look a little bit
+                 * "magic" but it is actually coherent in terms of
+                 * unit:
+                 *
+                 *     ifetch_counter       -> #instructions            (i)
+                 *     clock_ifetch         -> #instructions / #seconds (i/s)
+                 *
+                 * As a consequence the result is in #seconds since:
+                 *
+                 *     i / (i/s)            -> s
+                 */
+                ts.tv_sec  = cpu->ifetch_counter / clock_ifetch;
+                ts.tv_nsec = ((cpu->ifetch_counter - (uint64_t)ts.tv_sec * clock_ifetch) * 1000000000) / clock_ifetch;
+            }
             ret = host_to_target_timespec(arg2, &ts);
         }
         return ret;
