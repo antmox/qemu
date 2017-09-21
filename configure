@@ -313,6 +313,7 @@ rdma=""
 gprof="no"
 syscall_fwd_compat="no"
 tcg_plugin="no"
+python_dev=""
 capstone=""
 debug_tcg="no"
 debug="no"
@@ -971,6 +972,10 @@ for opt do
   ;;
   --disable-tcg-plugin) tcg_plugin="no"
   ;;
+  --enable-python) python_dev="yes"
+  ;;
+  --disable-python) python_dev="no"
+  ;;
   --disable-capstone) capstone="no"
   ;;
   --enable-capstone) capstone="yes"
@@ -1556,6 +1561,7 @@ Optional stm features, enabled with --enable-FEATURE and
 disabled with --disable-FEATURE, default is disabled:
   syscall-fwd-compat     enable syscall forward compatibility in linux-user mode
   tcg-plugin             enable TCG plugin support
+  python                 enable python support for TCG plugins
   capstone               enable capstone support for TCG plugins
 
 NOTE: The object files are built at the place where configure is launched
@@ -2852,6 +2858,37 @@ if test "$capstone" != "no"; then
         capstone_cflags=`$pkg_config capstone --cflags 2>/dev/null`
         capstone_ldflags=`$pkg_config capstone --libs 2>/dev/null`
         capstone=yes
+    fi
+fi
+
+################################################################
+# libpython probe (defaults to no when tcg-plugin is disabled)
+if test "$tcg_plugin" = "no"; then
+    if test "$python_dev" != "yes"; then
+        python_dev="no"
+    fi
+fi
+if test "$python_dev" != "no"; then
+    if $pkg_config python --exists; then
+        _pythonmajor=`$pkg_config python --modversion 2>/dev/null | cut -f1 -d.`
+    else
+        if test "$python_dev" = "yes" ; then
+            feature_not_found "python2"
+        fi
+        python_dev=no
+    fi
+    if test "$python_dev" != "no" ; then
+        if test -z "$_pythonmajor" || test "$_pythonmajor" -ne 2; then
+            if test "$python_dev" = "yes" ; then
+                feature_not_found "python2"
+            fi
+            python_dev=no
+        fi
+    fi
+    if test "$python_dev" != "no" ; then
+        python_cflags=`$pkg_config python --cflags 2>/dev/null`
+        python_ldflags=`$pkg_config python --libs 2>/dev/null`
+        python_dev=yes
     fi
 fi
 
@@ -5351,6 +5388,7 @@ echo "host big endian   $bigendian"
 echo "target list       $target_list"
 echo "syscall fwd compat $syscall_fwd_compat"
 echo "tcg plugin support $tcg_plugin"
+echo "python support     $python_dev"
 echo "capstone support   $capstone"
 echo "gprof enabled     $gprof"
 echo "sparse enabled    $sparse"
@@ -5539,6 +5577,12 @@ if test "$capstone" = "yes" ; then
   echo "CONFIG_CAPSTONE=y" >> $config_host_mak
   echo "CAPSTONE_CFLAGS=-DCONFIG_CAPSTONE $capstone_cflags" >> $config_host_mak
   echo "CAPSTONE_LDFLAGS=$capstone_ldflags" >> $config_host_mak
+fi
+
+if test "$python_dev" = "yes" ; then
+  echo "CONFIG_PYTHON=y" >> $config_host_mak
+  echo "PYTHON_CFLAGS=-DCONFIG_PYTHON $python_cflags" >> $config_host_mak
+  echo "PYTHON_LDFLAGS=$python_ldflags" >> $config_host_mak
 fi
 
 if test "$debug_tcg" = "yes" ; then
