@@ -88,7 +88,7 @@ static PyObject *qemu_getcode(PyObject *self, PyObject *args)
     uint64_t address, size;
     if (!PyArg_ParseTuple(args, "ll", &address, &size))
         return NULL;
-    return Py_BuildValue("s", strndup((char *)tpi_guest_ptr(0, address), size));
+    return Py_BuildValue("s#", (char *)tpi_guest_ptr(0, address), size);
 }
 
 
