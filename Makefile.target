@@ -173,7 +173,8 @@ EMULATION_MODE=system
 endif
 
 TCG_PLUGINS := $(patsubst $(SRC_PATH)/tcg/plugins/%.c,tcg-plugin-%.so,$(wildcard $(SRC_PATH)/tcg/plugins/*.c))
-all: $(TCG_PLUGINS) tcg_plugin_python.py
+TCG_PYTHON_PLUGINS := $(patsubst $(SRC_PATH)/tcg/plugins/%.py,tcg_plugin_%.py,$(wildcard $(SRC_PATH)/tcg/plugins/*.py))
+all: $(TCG_PLUGINS) $(TCG_PYTHON_PLUGINS)
 
 .SECONDARY: $(TCG_PLUGINS:.so=.o)
 
@@ -188,7 +189,7 @@ $(TCG_PLUGINS): LDFLAGS += -shared
 tcg-plugin-%.so: tcg-plugin-%.o
 	$(call LINK,$^)
 
-tcg_plugin_python.py: $(SRC_PATH)/tcg/plugins/python.py
+tcg_plugin_%.py: $(SRC_PATH)/tcg/plugins/%.py
 	cp $< $@
 
 d4-7/config.h: $(SRC_PATH)/tcg/plugins/d4-7/configure
@@ -296,7 +297,7 @@ endif
 ifdef CONFIG_TCG_PLUGIN
 	$(INSTALL_DIR) "$(DESTDIR)$(libexecdir)/$(TARGET_NAME)/$(EMULATION_MODE)"
 	$(INSTALL_PROG) $(TCG_PLUGINS) "$(DESTDIR)$(libexecdir)/$(TARGET_NAME)/$(EMULATION_MODE)"
-	$(INSTALL_PROG) tcg_plugin_python.py "$(DESTDIR)$(libexecdir)/$(TARGET_NAME)/$(EMULATION_MODE)"
+	$(INSTALL_PROG) $(TCG_PYTHON_PLUGINS) "$(DESTDIR)$(libexecdir)/$(TARGET_NAME)/$(EMULATION_MODE)"
 endif
 
 GENERATED_FILES += config-target.h
