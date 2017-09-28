@@ -81,7 +81,7 @@ def import_plugin(plugin_filename):
     plugin_id = os.path.splitext(os.path.basename(plugin_filename))[0]
     # try already installed python plugins
     try:
-        module = __import__(plugin_id, globals(), locals())
+        module = __import__('tcg_plugin_' + plugin_id, globals(), locals())
         return module
     except ImportError: pass
     except: raise
@@ -123,9 +123,9 @@ def on_block_exec(address, size):
     # on_block_exec
     plugins_callback('on_block_exec', address, size, block_sym.get(address, None))
 
+def on_instr_exec(address):
     # on_instr_exec
-    for instr in get_disas_code(address, size):
-        plugins_callback('on_instr_exec', instr)
+    plugins_callback('on_instr_exec', address)
 
 
 # ############################################################################

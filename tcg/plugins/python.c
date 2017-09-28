@@ -78,6 +78,7 @@ static struct {
     PyObject *on_progr_start;
     PyObject *on_block_trans;
     PyObject *on_block_exec;
+    PyObject *on_instr_exec;
     PyObject *on_progr_end;
 } plugin_state = { 0 };
 
@@ -140,6 +141,38 @@ static void pre_tb_helper_data(
 }
 
 
+// instr execution
+static void after_exec_opc(uint64_t address)
+{
+    PyObject *pArgs, *pValue, *pFunc;
+
+    pFunc = plugin_state.on_instr_exec;
+
+    if (pFunc == NULL) return;
+
+    pArgs = PyTuple_New(1);
+
+    pValue = PyInt_FromLong(address);
+    PyTuple_SetItem(pArgs, 0, pValue);
+
+    Py_CallRef(pFunc, pArgs);
+}
+
+
+// instr translation
+static void after_gen_opc(
+    const TCGPluginInterface *tpi, const TPIOpCode *tpi_opcode)
+{
+    if (tpi_opcode->operator != INDEX_op_insn_start)
+        return;
+
+    // insert call to after_exec_opc
+    TCGArg args[] = {
+        GET_TCGV_I64(tcg_const_i64(tpi_opcode->pc)) };
+    tcg_gen_callN(tpi->tcg_ctx, after_exec_opc, TCG_CALL_DUMMY_ARG, 1, args);
+}
+
+
 // block execution
 static void pre_tb_helper_code(
     const TCGPluginInterface *tpi, TPIHelperInfo info, uint64_t address,
@@ -185,6 +218,10 @@ static void cpus_stopped(const TCGPluginInterface *tpi)
     if (pFunc != NULL)
         Py_XDECREF(pFunc);
 
+    pFunc = plugin_state.on_instr_exec;
+    if (pFunc != NULL)
+        Py_XDECREF(pFunc);
+
     pFunc = plugin_state.on_progr_end;
     if (pFunc != NULL)
         Py_XDECREF(pFunc);
@@ -200,10 +237,12 @@ static void cpus_stopped(const TCGPluginInterface *tpi)
 void tpi_init(TCGPluginInterface* tpi)
 {
     TPI_INIT_VERSION(tpi);
+    TPI_DECL_FUNC_1(tpi, after_exec_opc, void, i64);
 
     tpi->cpus_stopped = cpus_stopped;
     tpi->pre_tb_helper_data  = pre_tb_helper_data;
     tpi->pre_tb_helper_code  = pre_tb_helper_code;
+    tpi->after_gen_opc = after_gen_opc;
 
     char *plugin_dir = NULL, *plugin_base = NULL;
     assert(tpi->path_name);
@@ -239,24 +278,34 @@ void tpi_init(TCGPluginInterface* tpi)
 
         plugin_state.pModule = pModule;
 
-        pFunc = PyObject_GetAttrString(pModule, "on_progr_start");
+        pFunc = PyObject_HasAttrString(pModule, "on_progr_start") ?
+            PyObject_GetAttrString(pModule, "on_progr_start") : NULL;
         if (pFunc != NULL && PyCallable_Check(pFunc)) {
             plugin_state.on_progr_start = pFunc;
         }
 
-        pFunc = PyObject_GetAttrString(pModule, "on_progr_end");
+        pFunc = PyObject_HasAttrString(pModule, "on_progr_end") ?
+            PyObject_GetAttrString(pModule, "on_progr_end") : NULL;
         if (pFunc != NULL && PyCallable_Check(pFunc)) {
             plugin_state.on_progr_end = pFunc;
         }
 
-        pFunc = PyObject_GetAttrString(pModule, "on_block_trans");
+        pFunc = PyObject_HasAttrString(pModule, "on_block_trans") ?
+            PyObject_GetAttrString(pModule, "on_block_trans") : NULL;
         if (pFunc != NULL && PyCallable_Check(pFunc)) {
             plugin_state.on_block_trans = pFunc;
         }
 
-        pFunc = PyObject_GetAttrString(pModule, "on_block_exec");
+        pFunc = PyObject_HasAttrString(pModule, "on_block_exec") ?
+            PyObject_GetAttrString(pModule, "on_block_exec") : NULL;
         if (pFunc != NULL && PyCallable_Check(pFunc)) {
             plugin_state.on_block_exec = pFunc;
+        }
+
+        pFunc = PyObject_HasAttrString(pModule, "on_instr_exec") ?
+            PyObject_GetAttrString(pModule, "on_instr_exec") : NULL;
+        if (pFunc != NULL && PyCallable_Check(pFunc)) {
+            plugin_state.on_instr_exec = pFunc;
         }
 
         pFunc = plugin_state.on_progr_start;
