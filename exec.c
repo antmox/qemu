@@ -861,6 +861,23 @@ const VMStateDescription vmstate_cpu_common = {
 
 #endif
 
+/* Count the number of fetched instructions.  */
+int count_ifetch = 0;
+
+void show_all_ifetch_counters(void)
+{
+    CPUState *cpu;
+
+    if (!count_ifetch)
+        return;
+
+    CPU_FOREACH(cpu) {
+        fprintf(stderr,
+                "qemu: number of fetched instructions on CPU #%d = %" PRIu64 "\n",
+                cpu->cpu_index, cpu->ifetch_counter);
+    }
+}
+
 CPUState *qemu_get_cpu(int index)
 {
     CPUState *cpu;
@@ -1257,6 +1274,8 @@ void cpu_abort(CPUState *cpu, const char *fmt, ...)
 {
     va_list ap;
     va_list ap2;
+
+    show_all_ifetch_counters();
 
     va_start(ap, fmt);
     va_copy(ap2, ap);

@@ -3829,6 +3829,21 @@ at the start of execution recording. In replay mode this option is used
 to load the initial VM state.
 ETEXI
 
+DEF("count-ifetch", 0, QEMU_OPTION_count_ifetch, \
+    "-count-ifetch\n" \
+    "                count the number of fetched instructions\n",
+     QEMU_ARCH_ALL)
+STEXI
+@item -count-ifetch
+@findex -count-ifetch
+Report the number of fetched instructions at the end of the execution.
+This is equivalent to the number of executed instructions if you
+consider that all fetched instructions are executed even if they are
+invalidated, as it's typically the case with predicated instructions.
+This option is useful to evaluate some compiler optimizations and is
+not related to the option @option{-icount}.
+ETEXI
+
 DEF("watchdog", HAS_ARG, QEMU_OPTION_watchdog, \
     "-watchdog model\n" \
     "                enable virtual hardware watchdog [default=none]\n",

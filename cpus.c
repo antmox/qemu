@@ -1908,6 +1908,8 @@ void pause_all_vcpus(void)
     qemu_mutex_unlock_iothread();
     replay_mutex_lock();
     qemu_mutex_lock_iothread();
+
+    show_all_ifetch_counters();
 }
 
 void cpu_resume(CPUState *cpu)

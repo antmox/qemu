@@ -381,6 +381,7 @@ struct CPUState {
     int64_t icount_extra;
     uint64_t random_seed;
     sigjmp_buf jmp_env;
+    uint64_t ifetch_counter; /* fetched instructions for -count-ifetch */
 
     QemuMutex work_mutex;
     struct qemu_work_item *queued_work_first, *queued_work_last;
