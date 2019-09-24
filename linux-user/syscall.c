@@ -7261,6 +7261,9 @@ static abi_long do_syscall1(void *cpu_env, int num, abi_long arg1,
         return ret;
 #endif
     case TARGET_NR_close:
+        /* don't close stdin/stdout/stderr */
+        if (arg1 <= 2)
+            return 0;
         fd_trans_unregister(arg1);
         return get_errno(close(arg1));
 
